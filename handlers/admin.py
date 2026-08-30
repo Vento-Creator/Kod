@@ -481,32 +481,63 @@ async def on_channel_add_start(callback: CallbackQuery, state: FSMContext) -> No
         await callback.message.answer(texts.CHANNEL_ADD_STEP_ID, reply_markup=cancel_keyboard())
 
 
+def _canonical_channel_input(raw: str) -> str:
+    """Convert the admin's raw input into a canonical get_chat() token.
+
+    Accepts:
+      * ``@username``                     -> returns it unchanged
+      * ``https://t.me/username``         -> ``@username``
+      * ``t.me/username`` (no scheme)     -> ``@username``
+      * numeric channel id, e.g. ``1234567890`` -> ``-1001234567890``
+        (positive numbers get the standard ``-100`` supergroup prefix;
+         already-prefixed ids such as ``-100...`` pass through unchanged)
+
+    Raises ``ValueError`` for anything else - including private invite links
+    (``https://t.me/+code``) which cannot be resolved to a channel id without
+    joining.
+    """
+    token = (raw or "").strip()
+    if not token:
+        raise ValueError("empty input")
+
+    # t.me links: extract the username segment (ignore query/extra paths).
+    if "t.me/" in token:
+        suffix = token.split("t.me/", 1)[1].split("?", 1)[0].split("/", 1)[0].strip()
+        if not suffix or suffix.startswith("+"):
+            raise ValueError(f"unresolvable t.me link: {raw!r}")
+        return "@" + suffix.lstrip("@")
+
+    if token.startswith("@"):
+        return token
+
+    digits = token[1:] if token.startswith("-") else token
+    if not digits.isdigit():
+        raise ValueError(f"not a channel id: {raw!r}")
+    if token.isdigit():
+        return f"-100{token}"
+    return token
+
+
 @router.message(ChannelStates.waiting_channel_id)
 async def on_channel_id(
     message: Message, state: FSMContext, db: Database
 ) -> None:
-    raw = (message.text or "").strip()
-    
-    # Handle @username input - fetch channel ID from Telegram
-    if raw.startswith("@"):
+    try:
+        token = _canonical_channel_input(message.text or "")
+    except ValueError:
+        await message.answer(texts.CHANNEL_ADD_INVALID_ID)
+        return
+
+    if token.startswith("@"):
+        # Resolve @username / t.me link to its real channel id.
         try:
-            chat = await message.bot.get_chat(raw)
+            chat = await message.bot.get_chat(token)
             channel_id = str(chat.id)
-        except Exception:
+        except Exception:  # noqa: BLE001 - any API error means invalid
             await message.answer(texts.CHANNEL_ADD_INVALID_ID)
             return
     else:
-        # Handle numeric input - auto-prepend -100 if needed
-        digits = raw[1:] if raw.startswith("-") else raw
-        if not raw or not digits.isdigit():
-            await message.answer(texts.CHANNEL_ADD_INVALID_ID)
-            return
-        
-        # Auto-prepend -100 if user typed positive numbers
-        if raw.isdigit():
-            channel_id = f"-100{raw}"
-        else:
-            channel_id = raw
+        channel_id = token
     
     if await db.get_channel(channel_id) is not None:
         await message.answer(texts.CHANNEL_DUPLICATE_ID)
@@ -522,9 +553,9 @@ async def on_channel_id(
         logger.warning("Channel id %s rejected: %s", channel_id, exc)
         await message.answer(
             "⚠️ Kanal topilmadi yoki bot unga kirish huquqiga ega emas.\n\n"
-            "Kanal <b>ID</b> yoki <b>@username</b> ni qayta tekshiring va "
-            "botni kanalga <b>admin</b> qilib qo'shganingizga ishonch hosil "
-            "qiling."
+            "Kanal <b>ID</b>, <b>@username</b> yoki <b>https://t.me/...</b> "
+            "linkini qayta tekshiring va botni kanalga <b>admin</b> qilib "
+            "qo'shganingizga ishonch hosil qiling."
         )
         return
 

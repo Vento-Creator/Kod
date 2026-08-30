@@ -219,8 +219,9 @@ CHANNELS_MENU = (
 )
 CHANNEL_ADD_STEP_ID = (
     "🔢 <b>Kanal qo'shish (1/3)</b>\n\n"
-    "Kanalning <b>ID raqamini</b> yoki <b>@username</b> ni yuboring.\n"
-    "Masalan: <code>-1001234567890</code> yoki <code>@kanalnomi</code>\n\n"
+    "Kanalning <b>ID raqamini</b>, <b>@username</b> yoki <b>linkini</b> yuboring.\n"
+    "Masalan: <code>-1001234567890</code>, <code>@kanalnomi</code> yoki "
+    "<code>https://t.me/kanalnomi</code>\n\n"
     "Agar faqat raqam yuborsangiz, avtomatik <code>-100</code> qo'shiladi."
 )
 CHANNEL_ADD_STEP_LINK = (
@@ -238,7 +239,7 @@ CHANNEL_ADDED = (
     "🆔 ID:    {id}\n"
     "🔗 Link:  {url}"
 )
-CHANNEL_ADD_INVALID_ID = "⚠️ Kanal ID noto'g'ri. ID raqam yoki @username bo'lishi kerak."
+CHANNEL_ADD_INVALID_ID = "⚠️ Kanal ID noto'g'ri. ID raqam, @username yoki https://t.me/... linki bo'lishi kerak."
 CHANNEL_ADD_INVALID_LINK = "⚠️ Link <b>https://t.me/...</b> ko'rinishida bo'lishi kerak."
 CHANNEL_ADD_INVALID_NAME = "⚠️ Kanal nomi bo'sh bo'lmasligi kerak."
 CHANNEL_DUPLICATE_ID = "⚠️ Bu kanal allaqachon <b>qo'shilgan</b>."
