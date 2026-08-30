@@ -12,7 +12,7 @@ from config import settings
 from database import Database
 from keyboards.admin_inline import search_results_keyboard, subscription_required_keyboard
 from services.movies import MovieService
-from services.subscription import format_channels, get_missing_channels
+from services.subscription import format_channels, get_subscription_status
 from services.users import register_user
 from utils import texts, send_media
 
@@ -44,13 +44,23 @@ async def on_code_search(message: Message, db: Database) -> None:
     # Force-subscribe guard: regular users must be subscribed to every
     # required channel before the search is allowed. Admins bypass it.
     if not settings.is_admin(message.from_user.id):
-        missing = await get_missing_channels(
+        missing, unverifiable = await get_subscription_status(
             bot=message.bot, db=db, user_id=message.from_user.id
         )
-        if missing:
+        if missing or unverifiable:
+            blocked = missing + unverifiable
+            notice = texts.SUB_REQUIRED.format(
+                channels=format_channels(blocked)
+            )
+            if unverifiable:
+                # The bot could not verify some channel(s) - tell the user
+                # this is a bot-rights/id problem, not a real subscription.
+                notice += "\n\n" + texts.SUB_CHANNEL_UNCHECKABLE.format(
+                    channels=format_channels(unverifiable)
+                )
             await message.answer(
-                texts.SUB_REQUIRED.format(channels=format_channels(missing)),
-                reply_markup=subscription_required_keyboard(missing),
+                notice,
+                reply_markup=subscription_required_keyboard(blocked),
             )
             return
 

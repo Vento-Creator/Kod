@@ -17,7 +17,7 @@ from keyboards.reply import (
     admin_main_keyboard,
     home_keyboard,
 )
-from services.subscription import format_channels, get_missing_channels
+from services.subscription import format_channels, get_subscription_status
 from services.users import register_user
 from utils import texts
 
@@ -134,11 +134,25 @@ async def on_sub_check(callback: CallbackQuery, db: Database) -> None:
     if callback.message is None:
         return
 
-    missing = await get_missing_channels(bot=callback.bot, db=db, user_id=user_id)
+    missing, unverifiable = await get_subscription_status(
+        bot=callback.bot, db=db, user_id=user_id
+    )
+
     if missing:
         await callback.message.edit_text(
             texts.SUB_STILL_MISSING.format(channels=format_channels(missing)),
             reply_markup=subscription_required_keyboard(missing),
+        )
+        return
+
+    if unverifiable:
+        # The bot could not verify membership for these channels - warn
+        # instead of silently blocking the user with a wrong prompt.
+        await callback.message.edit_text(
+            texts.SUB_CHANNEL_UNCHECKABLE.format(
+                channels=format_channels(unverifiable)
+            ),
+            reply_markup=subscription_required_keyboard(unverifiable),
         )
         return
 

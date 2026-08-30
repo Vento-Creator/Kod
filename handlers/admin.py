@@ -511,6 +511,23 @@ async def on_channel_id(
     if await db.get_channel(channel_id) is not None:
         await message.answer(texts.CHANNEL_DUPLICATE_ID)
         return
+
+    # Verify the resolved channel id actually exists and the bot can read it.
+    # This catches mistyped ids immediately (e.g. a missing -100 prefix) and
+    # prevents storing a channel the bot cannot see - which would otherwise
+    # show users an endless "subscribe" prompt.
+    try:
+        await message.bot.get_chat(channel_id)
+    except Exception as exc:  # noqa: BLE001 - surface the exact API error
+        logger.warning("Channel id %s rejected: %s", channel_id, exc)
+        await message.answer(
+            "⚠️ Kanal topilmadi yoki bot unga kirish huquqiga ega emas.\n\n"
+            "Kanal <b>ID</b> yoki <b>@username</b> ni qayta tekshiring va "
+            "botni kanalga <b>admin</b> qilib qo'shganingizga ishonch hosil "
+            "qiling."
+        )
+        return
+
     await state.update_data(channel_id=channel_id)
     await state.set_state(ChannelStates.waiting_channel_link)
     await message.answer(texts.CHANNEL_ADD_STEP_LINK, reply_markup=cancel_keyboard())

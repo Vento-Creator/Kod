@@ -200,8 +200,8 @@ BROADCAST_START = (
     "yetkazib beriladi.\n\n"
     "<i>HTML avtomatik escaped.</i>"
 )
-BROADCAST_EMPTY = "⚠️ Esek matni bo'sh bo'lmasligi kerak."
-BROADCAST_SENDING = "📣 Tarqatilyapti... bu bir oz foydalanadi."
+BROADCAST_EMPTY = "⚠️ Habar matni bo'sh bo'lmasligi kerak."
+BROADCAST_SENDING = "📣 Tarqatilyapti... bu bir oz kuting."
 BROADCAST_DONE = (
     "📣 <b>Eshek yakunlandi</b>\n\n"
     "👥 Jami:      {total}\n"
@@ -263,6 +263,12 @@ SUB_REQUIRED = (
     "Obuna bo'lgach, \"✅ Tekshirish\" tugmasini bosing."
 )
 SUB_BANNED_BOT_ACCESS = "⚠️ Bot kanalga to'liq kira olmayapti. Admin interfeysidan kanalni tekshiring."
+SUB_CHANNEL_UNCHECKABLE = (
+    "⚠️ <b>Bot quyidagi kanallardagi obunangizni tekshira olmadi:</b>\n"
+    "{channels}\n\n"
+    "Sabab: kanal <b>ID</b> noto'g'ri kiritilgan yoki <b>bot kanalga admin "
+    "qilib qo'shilmagan</b>. Iltimos, administratorga xabar bering."
+)
 SUB_SUCCESS = "✅ <b>Obuna muvaffaqiyatli tasdiqlandi!</b>\n\nEndi kino kodini yuboring."
 SUB_STILL_MISSING = (
     "⚠️ Hali ham quyidagi kanallarga obuna bo'lishingiz kerak:\n\n"
