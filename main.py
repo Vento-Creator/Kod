@@ -32,6 +32,10 @@ from middlewares import AntiFloodMiddleware, DatabaseMiddleware
 
 logger = logging.getLogger(__name__)
 
+#: Bump on every deploy-worthy change. Visible in the startup log line so a
+#: stale Railway deployment can be spotted immediately.
+BOT_VERSION = "1.0.4"
+
 
 def setup_logging() -> None:
     logging.basicConfig(
@@ -55,7 +59,9 @@ async def set_bot_commands(bot: Bot) -> None:
 async def main() -> None:
     setup_logging()
     settings = get_settings()
-    logger.info("Kodli Movie Finder bot boshlatilmoqda...")
+    logger.info(
+        "Kodli Movie Finder bot v%s boshlanmoqda...", BOT_VERSION
+    )
 
     db = Database(settings.database_path)
     await db.connect()
