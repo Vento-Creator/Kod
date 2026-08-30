@@ -195,6 +195,10 @@ def subscription_required_keyboard(missing: list[Channel]) -> InlineKeyboardMark
     rows.append(
         [InlineKeyboardButton(text="✅ Tekshirish", callback_data=CD["sub_check"])]
     )
+    # Escape hatch: never trap the user in the subscription screen.
+    rows.append(
+        [InlineKeyboardButton(text="🏠 Bosh menyu", callback_data=CD["home"])]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

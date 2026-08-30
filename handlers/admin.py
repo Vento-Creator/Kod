@@ -571,6 +571,21 @@ async def on_channel_id(
     await message.answer(texts.CHANNEL_ADD_STEP_LINK, reply_markup=cancel_keyboard())
 
 
+def _link_username(link: str) -> str | None:
+    """Extract the public username from a t.me link, or ``None``.
+
+    Private invite links (``https://t.me/+code``) have no username and
+    return ``None``.
+    """
+    token = (link or "").strip()
+    if "t.me/" not in token:
+        return None
+    suffix = token.split("t.me/", 1)[1].split("?", 1)[0].split("/", 1)[0].strip()
+    if not suffix or suffix.startswith("+"):
+        return None
+    return suffix.lstrip("@").lower() or None
+
+
 @router.message(ChannelStates.waiting_channel_link)
 async def on_channel_link(
     message: Message, state: FSMContext
@@ -579,6 +594,30 @@ async def on_channel_link(
     if not link.startswith("https://t.me/"):
         await message.answer(texts.CHANNEL_ADD_INVALID_LINK)
         return
+
+    # Guard against storing a mismatched pair: the link must point to the
+    # same chat as the channel id captured in step 1/3. A mismatched pair
+    # would make users "subscribe" to channel A while the bot keeps checking
+    # channel B - an endless false "obuna bo'lmadingiz" loop.
+    data = await state.get_data()
+    channel_id = data.get("channel_id") or ""
+    expected = _link_username(link)
+    if expected and channel_id:
+        try:
+            chat = await message.bot.get_chat(channel_id)
+        except Exception:  # noqa: BLE001 - verification is best-effort
+            chat = None
+        chat_username = (getattr(chat, "username", None) or "").lower()
+        if chat_username and chat_username != expected:
+            await message.answer(
+                "⚠️ <b>Link va kanal ID mos kelmadi.</b>\n\n"
+                f"Bu link boshqa chatga tegishli: <b>@{esc(chat_username)}</b>\n"
+                f"1/3 qadamda kiritilgan ID: <code>{esc(channel_id)}</code>\n\n"
+                "Iltimos, /cancel buyrug'ini bosib kanalni qaytadan qo'shing "
+                "va ID bilan link bir xil kanalga tegishliligini tekshiring."
+            )
+            return
+
     await state.update_data(channel_url=link)
     await state.set_state(ChannelStates.waiting_channel_name)
     await message.answer(texts.CHANNEL_ADD_STEP_NAME, reply_markup=cancel_keyboard())

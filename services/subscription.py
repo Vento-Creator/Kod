@@ -86,7 +86,22 @@ async def check_channel_subscription(
             "get_chat_member(%s, %s) failed: %s", channel_id, user_id, exc
         )
         return False
-    return member.status in VALID_STATUSES
+
+    status = getattr(member, "status", "")
+    if status in VALID_STATUSES:
+        return True
+    # Users who joined but are muted/limited (e.g. by channel slow-mode or
+    # admin restrictions) report status "restricted" with is_member=True -
+    # they ARE subscribed and must not be blocked.
+    if status == "restricted" and bool(getattr(member, "is_member", False)):
+        return True
+    # Log the exact status so a false "not subscribed" can be diagnosed from
+    # the Railway logs (status + which channel id was actually checked).
+    logger.warning(
+        "User %s is NOT a member of channel %s (status=%s) - reported as missing",
+        user_id, channel_id, status or "<unknown>",
+    )
+    return False
 
 
 async def get_subscription_status(
