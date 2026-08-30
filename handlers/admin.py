@@ -406,14 +406,28 @@ async def on_replace_media(message: Message, state: FSMContext, db: Database) ->
 # ---------------------------------------------------------------------- #
 # Force-subscribe (kanallarni boshqarish)
 # ---------------------------------------------------------------------- #
-def _render_channels(channels: list[Channel]) -> str:
-    """Human readable channel list used in the admin channel screen."""
+def _render_channels(
+    channels: list[Channel], live: dict[str, str] | None = None
+) -> str:
+    """Human readable channel list used in the admin channel screen.
+
+    ``live`` maps channel_id -> the REAL chat title/@username as Telegram
+    reports it right now. If it differs from the stored name, the stored id
+    points to a different chat - which is the classic cause of endless
+    false "obuna bo'lmadingiz" loops.
+    """
     if not channels:
         return texts.CHANNELS_EMPTY
+    live = live or {}
     lines = "\n\n".join(
         f"📢 <b>{esc(channel.channel_name)}</b>\n"
         f"🆔 <code>{esc(channel.channel_id)}</code>\n"
         f"🔗 {esc(channel.channel_url)}"
+        + (
+            f"\n🛰 Telegramda hozir: {live[channel.channel_id]}"
+            if channel.channel_id in live
+            else ""
+        )
         for channel in channels
     )
     return texts.CHANNELS_LIST.format(lines=lines)
@@ -650,13 +664,29 @@ async def on_channel_name(
 
 @router.callback_query(F.data == CD["channel_list"])
 async def on_channel_list(callback: CallbackQuery, db: Database) -> None:
-    """Show all required channels with per-row delete buttons."""
+    """Show all required channels with per-row delete buttons.
+
+    For every stored channel id we also fetch the REAL chat identity from
+    Telegram so the admin can immediately spot an id that points to a
+    different chat than the stored name suggests.
+    """
     await callback.answer()
     if callback.message is None:
         return
     channels = await db.list_channels()
+    live: dict[str, str] = {}
+    for channel in channels:
+        try:
+            chat = await callback.bot.get_chat(channel.channel_id)
+            username = (
+                f" (@{chat.username})" if getattr(chat, "username", None) else ""
+            )
+            live[channel.channel_id] = f"{esc(chat.title or '?')}{username}"
+        except Exception as exc:  # noqa: BLE001 - surface the problem inline
+            logger.warning("get_chat(%s) failed: %s", channel.channel_id, exc)
+            live[channel.channel_id] = "⚠️ o'qib bo'lmadi (bot admin emasmi?)"
     await callback.message.edit_text(
-        _render_channels(channels),
+        _render_channels(channels, live),
         reply_markup=channels_list_keyboard(channels),
     )
 
