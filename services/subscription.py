@@ -80,10 +80,13 @@ async def check_channel_subscription(
                 channel_id, user_id, exc,
             )
             return None
-        # Any other API error (e.g. the user really is not a member) simply
-        # means "not subscribed".
-        logger.debug(
-            "get_chat_member(%s, %s) failed: %s", channel_id, user_id, exc
+        # Any other API error (e.g. PARTICIPANT_ID_INVALID - the user has no
+        # membership in THIS chat) means "not subscribed". Log at WARNING so
+        # it is visible at the default INFO level - a silent path here made
+        # false "obuna bo'lmadingiz" verdicts impossible to diagnose.
+        logger.warning(
+            "get_chat_member(%s, %s) failed - treating as NOT subscribed: %s",
+            channel_id, user_id, exc,
         )
         return False
 
@@ -117,6 +120,13 @@ async def get_subscription_status(
     for channel in await db.list_channels():
         result = await check_channel_subscription(
             bot, channel.channel_id, user_id
+        )
+        # Always visible in INFO logs: which stored channel id was checked
+        # and what the verdict was - this is the key to diagnosing false
+        # "obuna bo'lmadingiz" reports caused by a wrong stored channel id.
+        logger.info(
+            "Subscription check: user=%s stored_channel=%s (%s) -> %s",
+            user_id, channel.channel_id, channel.channel_name, result,
         )
         if result is False:
             missing.append(channel)
