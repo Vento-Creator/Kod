@@ -474,11 +474,18 @@ async def on_channel_add_start(callback: CallbackQuery, state: FSMContext) -> No
     await state.update_data(channel_id=None, channel_url=None, channel_name=None)
     await callback.answer()
     if callback.message is not None:
-        await callback.message.edit_text(
-            texts.CHANNEL_ADD_STEP_ID, reply_markup=cancel_inline_keyboard()
+        # Replace the channels menu with a SINGLE prompt message that also
+        # carries the ReplyKeyboard cancel button. edit_text cannot attach a
+        # ReplyKeyboardMarkup, so a fresh message is required - previously
+        # BOTH an edit and a new message were sent with the same text,
+        # duplicating the "1/3" prompt.
+        try:
+            await callback.message.delete()
+        except Exception:  # noqa: BLE001 - stale/too-old message, etc.
+            logger.warning("Could not delete the channels menu message")
+        await callback.message.answer(
+            texts.CHANNEL_ADD_STEP_ID, reply_markup=cancel_keyboard()
         )
-        # Also send a message with the reply keyboard for user input
-        await callback.message.answer(texts.CHANNEL_ADD_STEP_ID, reply_markup=cancel_keyboard())
 
 
 def _canonical_channel_input(raw: str) -> str:

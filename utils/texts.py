@@ -279,7 +279,7 @@ SUB_STILL_MISSING = (
 # Flood / anti-spam (O'zbek)
 FLOOD_WARNING = (
     "⚠️ <b>Birinchi ogohlantirish - so'rovlar juda ko'p!</b>\n\n"
-    "⏱️ So'rovlaringiz juda tez - sekinlag'ing!\n\n"
+    "⏱️ So'rovlaringiz juda tez - sekinlating!\n\n"
     "<b>Keyingi buzilish uchun avtomatik vaqtincha blok.</b>"
 )
 FLOOD_TEMP_BAN = (
