@@ -49,6 +49,10 @@ _UNVERIFIABLE_FRAGMENTS = (
     "chat admin privileges are required",
     "method is available only for supergroups",
     "group chat was upgraded",
+    # Channels where the bot is not an administrator: getChatMember is
+    # rejected with exactly this message - the bot simply cannot read the
+    # member list, so the subscription cannot be verified at all.
+    "member list is inaccessible",
 )
 
 
