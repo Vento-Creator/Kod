@@ -53,13 +53,23 @@ async def on_start(message: Message, db: Database) -> None:
         return
 
     # Force-subscribe guard: only for regular users.
-    missing = await get_missing_channels(
+    missing, unverifiable = await get_subscription_status(
         bot=message.bot, db=db, user_id=message.from_user.id
     )
-    if missing:
+    if missing or unverifiable:
+        blocked = missing + unverifiable
+        notice = texts.SUB_REQUIRED.format(
+            channels=format_channels(blocked)
+        )
+        if unverifiable:
+            # The bot could not verify some channel(s) - tell the user
+            # this is a bot-rights/id problem, not a real subscription.
+            notice += "\n\n" + texts.SUB_CHANNEL_UNCHECKABLE.format(
+                channels=format_channels(unverifiable)
+            )
         await message.answer(
-            texts.SUB_REQUIRED.format(channels=format_channels(missing)),
-            reply_markup=subscription_required_keyboard(missing),
+            notice,
+            reply_markup=subscription_required_keyboard(blocked),
         )
         return
 
